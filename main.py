@@ -2,8 +2,15 @@ from flask import Flask
 from flask import request, render_template
 from form import Form
 from trie import TrirTree
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "123456"
+limiter = Limiter(
+    app,
+    key_func=get_remote_address,
+    default_limits=["200 per day", "50 per hour"]
+)
 
 @app.route('/', methods=['POST', 'GET'])
 def index():
@@ -21,7 +28,10 @@ def index():
 
 @app.route('/query?item=<result>', methods=['GET'])
 def show(result):
-    return render_template('result.html', result=dict.search(result))
+    result = dict.search(result)
+    if len(result) == 0:
+        return render_template('search.html', error=None, success="Nothing")
+    return render_template('search.html', error=None, success=result)
 
 @app.route('/add?item=<location>', methods=['POST'])
 def add(location):
