@@ -10,6 +10,7 @@ from flask_jwt_extended import (
     JWTManager, jwt_required, create_access_token,
 )
 from datetime import timedelta
+import random
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "123456"
 app.config['JWT_SECRET_KEY'] = '123456'
@@ -66,7 +67,7 @@ class AutoCompleteSystem(FlaskView):
         location = request.args['location']
         error = None
         success = None
-        if dict.add(location):
+        if dict.add(location, random.randint(1, 20000)):
             success = 'Update successfully!'
         else:
             error = "The location already exists!"
@@ -94,9 +95,22 @@ class AutoCompleteSystem(FlaskView):
         else:
             return jsonify({'result': success}), 200
 
+def construct_tree(file):
+    dict = TrirTree()
+    f = open(file)
+    line = f.readline()
+    while line:
+        line = line.strip('\n')
+        data = line.split(' ')
+        dict.add(data[1], data[0])
+        line = f.readline()
+    f.close()
+    return dict
+
 if __name__ == '__main__':
     dict = TrirTree()
-    dict.add('San Jose')
-    dict.add('San Diego')
+    dict.add('San_Jose', 324)
+    dict.add('San_Diego', 333323)
+    dict = construct_tree('location-cnt.txt')
     AutoCompleteSystem.register(app, route_base='/')
     app.run(debug=True, port=8000)
