@@ -102,7 +102,10 @@ def construct_tree(file):
     while line:
         line = line.strip('\n')
         data = line.split(' ')
-        dict.add(data[1], data[0])
+        if data[0].isalnum():
+            dict.add(data[1], int(data[0]))
+        else:
+            dict.add(data[0], int(data[1]))
         line = f.readline()
     f.close()
     return dict
