@@ -8,6 +8,7 @@ class TrirTree:
         self.root = TrieNode()
 
     def search(self, prefix):
+        """ search a prefix """
         node = self.root
         for char in prefix:
             if char in node.children:
@@ -26,23 +27,28 @@ class TrirTree:
         return match
 
     def add(self, word):
+        """ add a word """
         node = self.root
         for char in word:
             if char not in node.children:
                 node.children[char] = TrieNode()
             node = node.children[char]
-        if node.end:# already exists
+        if node.end:
+            """ already exists """
             return False
         node.end = True
         return True
 
     def delete(self, word):
+        """ delete a word """
         node = self.root
         for char in word:
             if char not in node.children:
-                return False #doesn't exist
+                """ the word doesn't exist """
+                return False
             node = node.children[char]
         if not node.end:
+            """ the word doesn't exist """
             return False
         node.end = False
         return True

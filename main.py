@@ -6,9 +6,14 @@ from flask_limiter.util import get_remote_address
 from lock import RWLock
 from flask_caching import Cache
 from flask_classful import FlaskView, route
+from flask_jwt_extended import (
+    JWTManager, jwt_required, create_access_token,
+)
+from datetime import timedelta
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "123456"
-
+app.config['JWT_SECRET_KEY'] = '123456'
+jwt = JWTManager(app)
 
 class AutoCompleteSystem(FlaskView):
     def __init__(self):
@@ -17,11 +22,12 @@ class AutoCompleteSystem(FlaskView):
         self.limiter = Limiter(
                             app,
                             key_func=get_remote_address,
-                            default_limits=["200 per day", "50 per hour"]
+                            default_limits=["2000 per day", "50 per hour"]
                         )
 
     @route('/query', methods=['GET'])
     def search(self):
+        """ search a prefix """
         self.lock.acquire_read()
         location = request.args['item']
         data = self.cache.get(location)
@@ -33,8 +39,29 @@ class AutoCompleteSystem(FlaskView):
         self.lock.release()
         return jsonify({'result': result}), 200
 
+    @route('/login', methods=['POST'])
+    def login(self):
+        """ login to get a access token """
+        if not request.is_json:
+            return jsonify({"msg": "Invalid JSON format in request"}), 400
+
+        username = request.json.get('username', None)
+        password = request.json.get('password', None)
+
+        if not username:
+            return jsonify({"msg": "Missing username"}), 400
+        if not password:
+            return jsonify({"msg": "Missing password"}), 400
+        if username != 'admin' or password != '123456':
+            return jsonify({"msg": "Invalid username or password"}), 401
+
+        access_token = create_access_token(identity=username, expires_delta=timedelta(minutes=2))
+        return jsonify(access_token=access_token), 200
+
     @route('/add', methods=['POST'])
+    @jwt_required
     def add(self):
+        """ add a word """
         self.lock.acquire_write()
         location = request.args['location']
         error = None
@@ -50,7 +77,9 @@ class AutoCompleteSystem(FlaskView):
             return jsonify({'result': success}), 200
 
     @route('/delete', methods=['POST'])
+    @jwt_required
     def delete(self):
+        """ delete a word """
         self.lock.acquire_write()
         location = request.args['location']
         error = None
