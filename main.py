@@ -109,8 +109,6 @@ def construct_tree(file):
 
 if __name__ == '__main__':
     dict = TrirTree()
-    dict.add('San_Jose', 324)
-    dict.add('San_Diego', 333323)
     dict = construct_tree('location-cnt.txt')
     AutoCompleteSystem.register(app, route_base='/')
     app.run(debug=True, port=8000)
