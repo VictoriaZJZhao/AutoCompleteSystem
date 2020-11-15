@@ -1,45 +1,36 @@
 from flask import Flask
-from flask import request, render_template
-from form import Form
+from flask import request, render_template, redirect, url_for, jsonify
 from trie import TrirTree
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from lock import RWLock
+from flask_caching import Cache
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "123456"
+cache = Cache(app,config={'CACHE_TYPE': 'simple'})
 limiter = Limiter(
     app,
     key_func=get_remote_address,
     default_limits=["200 per day", "50 per hour"]
 )
 
-@app.route('/', methods=['POST', 'GET'])
-def index():
-    # TODO 1. lower and upper 2. construct trie tree
-    form = Form()
-    if request.method == 'POST':
-        word = request.form['word']
-        if form.search.data:
-            return show(word)
-        if form.add.data:
-            return add(word)
-        if form.delete.data:
-            return delete(word)
-    return render_template('search.html', error=None, success=None)
-
-@app.route('/query?item=<locations>', methods=['GET'])
-def show(locations):
+@app.route('/query', methods=['GET'])
+def show():
     lock.acquire_read()
-    result = dict.search(locations)
-    if len(result) == 0:
+    location = request.args['item']
+    data = cache.get(location)
+    if data is not None:
         lock.release()
-        return render_template('search.html', error=None, success="Nothing")
+        return jsonify({'result': data}), 200
+    result = dict.search(location)
+    cache.set(location, result, timeout=100)
     lock.release()
-    return render_template('search.html', error=None, success=result)
+    return jsonify({'result': result}), 200
 
-@app.route('/add?item=<location>', methods=['POST'])
-def add(location):
+@app.route('/add', methods=['POST'])
+def add():
     lock.acquire_write()
+    location = request.args['location']
     error = None
     success = None
     if dict.add(location):
@@ -47,11 +38,15 @@ def add(location):
     else:
         error = "The location already exists!"
     lock.release()
-    return render_template('search.html', error=error, success=success)
+    if error:
+        return jsonify({'result': error}), 400
+    else:
+        return jsonify({'result': success}), 200
 
-@app.route('/delete?item=<location>', methods=['POST'])
-def delete(location):
+@app.route('/delete', methods=['POST'])
+def delete():
     lock.acquire_write()
+    location = request.args['location']
     error = None
     success = None
     if dict.delete(location):
@@ -59,7 +54,10 @@ def delete(location):
     else:
         error = "The location doesn't exist!"
     lock.release()
-    return render_template('search.html', error=error, success=success)
+    if error:
+        return jsonify({'result': error}), 404
+    else:
+        return jsonify({'result': success}), 200
 
 if __name__ == '__main__':
     dict = TrirTree()
