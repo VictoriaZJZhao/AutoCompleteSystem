@@ -12,7 +12,7 @@ from flask_jwt_extended import (
 from datetime import timedelta
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "123456"
-app.config['JWT_SECRET_KEY'] = '123456'
+app.config['JWT_SECRET_KEY'] = 'admin'
 jwt = JWTManager(app)
 
 class AutoCompleteSystem(FlaskView):
