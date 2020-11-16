@@ -43,12 +43,12 @@ class RWLock:
         wake_writers = self.waiting_writers and self.rwlock == 0
         wake_readers = self.waiting_writers == 0
         self.lock.release()
-        if wake_writers:
+        if wake_readers:
+            self.readers_ok.acquire()
+            self.readers_ok.notifyAll()
+            self.readers_ok.release()
+        elif wake_writers:
             writers_ok = self.waiting_writers_queue.get_nowait()
             writers_ok.acquire()
             writers_ok.notify()
             writers_ok.release()
-        elif wake_readers:
-            self.readers_ok.acquire()
-            self.readers_ok.notifyAll()
-            self.readers_ok.release()
